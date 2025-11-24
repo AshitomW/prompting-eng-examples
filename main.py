@@ -1,24 +1,19 @@
-from openai import OpenAI
-from dotenv import load_dotenv
-import os 
-load_dotenv()
+from fastapi import FastAPI, Body
+from ollama import Client 
 
-API_KEY = os.getenv("GEMINI_KEY")
-API_URL = os.getenv("GEMINI_URL")
 
-client = OpenAI(
-  api_key=API_KEY,
-  base_url=API_URL
+
+app = FastAPI()
+client = Client(
+  host="http://localhost:11434",
 )
 
 
-response = client.chat.completions.create(
-  model="gemini-2.5-flash",
-  messages=[
-    {"role":"system","content":"You are an expert in Maths and only and only answer maths related questions. That if the query is not related to maths. Just discard the query and say sorry"},
-    {"role":"user","content":"Hey, can you code a program that prints hello"}
-    
-  ]
-)
+@app.post("/chat")
+def chat(message:str = Body(...,description="The message")):
+  response = client.chat(model="gemma3:1b", messages=[
+    {"role":"user","content":message}
+  ])
 
-print(response.choices[0].message.content)
+  return {"response":response.message.content}
+
