@@ -39,16 +39,16 @@ SYSTEM_PROMPT = """
   Examples:
 
   START: Hey , can you solve 2 + 3 *4 / 10
-  PLAN: {"step":"plan", "content":"Seems like user is interested in maths problem"},
-  PLAN: {"step:"plan","content":"Looking at the problem, we shodl solve this using the BODMAS method"},
-  PLAN: {"step":"plan", "content":"Yes, the bodmas method is appropriate rule for this expression"},
-  PLAN: {"step":"plan", "content":"First we should multiply 3 and 4 which is 12"},
-  PLAN: {"step":"plan", "content":"Now the new equation is 2 + 12 / 10"},
-  PLAN: {"step":"plan", "content":"Now we should perform division on 12 / 10 which results in 1.2"},
-  PLAN: {"step":"plan", "content":"Now the resulting equation is 2 + 1.2"},
-  PLAN: {"step":"plan", "content":"Now performing  addtion of 2 + 1.2 we get 3.2"},
-  PLAN: {"step":"plan", "content":"since there are no more operations to be done , the final result is 3.2"},
-  OUTPUT: {"step":"output", "content":"2 + 3 * 4 / 10 = 3.2 "},
+  PLAN: {"step":"PLAN", "content":"Seems like user is interested in maths problem"},
+  PLAN: {"step:"PLAN","content":"Looking at the problem, we shodl solve this using the BODMAS method"},
+  PLAN: {"step":"PLAN", "content":"Yes, the bodmas method is appropriate rule for this expression"},
+  PLAN: {"step":"PLAN", "content":"First we should multiply 3 and 4 which is 12"},
+  PLAN: {"step":"PLAN", "content":"Now the new equation is 2 + 12 / 10"},
+  PLAN: {"step":"PLAN", "content":"Now we should perform division on 12 / 10 which results in 1.2"},
+  PLAN: {"step":"PLAN", "content":"Now the resulting equation is 2 + 1.2"},
+  PLAN: {"step":"PLAN", "content":"Now performing  addtion of 2 + 1.2 we get 3.2"},
+  PLAN: {"step":"PLAN", "content":"since there are no more operations to be done , the final result is 3.2"},
+  OUTPUT: {"step":"OUTPUT", "content":"2 + 3 * 4 / 10 = 3.2 "},
 
 
   
@@ -57,30 +57,52 @@ SYSTEM_PROMPT = """
 """
 
 
+print("\n\n\n")
+
+message_history = [
+  {"role":"system","content":SYSTEM_PROMPT}
+]
 
 
-response = client.chat.completions.create(
-  model="gemini-2.5-flash",
-  response_format={"type":"json_object"},
-  messages=[
-    {"role":"system","content":SYSTEM_PROMPT},
-    {"role":"user","content":"Hey, write a code to add n numbers in js"},
-    # Manually Adding to history
-    {"role":"assistant","content": json.dumps(
-        {
-          "step": "plan",
-          "content": "The user wants a JavaScript function to add 'n' numbers. I should define a function that can accept a variable number of arguments."
-        }
-    )}
-    ,
-     {"role":"assistant","content": json.dumps(
-            {
-        "step": "plan",
-        "content": "To add 'n' numbers in JavaScript, I can define a function that utilizes the rest parameter syntax (`...numbers`) to accept an arbitrary number of arguments. Then, I will iterate through these numbers (e.g., using `reduce` or a `for...of` loop) and sum them up."
-      }
-    )}
-  ]
-)
+query = input(">> ")
+message_history.append({"role":"user","content":query})
 
-print(response.choices[0].message.content)
 
+while True:
+  response = client.chat.completions.create(
+    model="gemini-2.5-flash",
+    response_format={"type":"json_object"}, 
+    messages=message_history
+  )
+
+  raw_response = response.choices[0].message.content
+  message_history.append({"role":"assistant","content":raw_response})
+  parsed_result = json.loads(raw_response)
+  if parsed_result.get("step") == "START":
+    print("Starting....",parsed_result.get("content"))
+    continue
+  
+  if parsed_result.get("step") == "PLAN":
+    print("Thinking...\n", parsed_result.get("content"))
+    continue 
+
+  if parsed_result.get("step") == "OUTPUT":
+    print("Output:\n", parsed_result.get("content"))
+    break
+
+
+
+# response = client.chat.completions.create(
+#   model="gemini-2.5-flash",
+#   response_format={"type":"json_object"},
+#   messages=[
+#     {"role":"system","content":SYSTEM_PROMPT},
+#     {"role":"user","content":"Hey, write a code to add n numbers in js"},
+
+#   ]
+# )
+
+# print(response.choices[0].message.content)
+
+
+print("\n\n\n")
