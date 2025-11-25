@@ -2,7 +2,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os 
 import requests 
-from ollama import Client
+from pydantic import BaseModel, Field
+from typing import Optional
 import json
 
 # client = Client(
@@ -50,6 +51,16 @@ def get_weather(city: str):
 # allow the model to run the get weather api call.
 
 # chain of thoughts
+
+
+
+class OutputFormat(BaseModel):
+  step: str = Field(...,description="The ID Of the step. Example : It Can be PLAN,OUTPUT, TOOL, etc.")
+  content: Optional[str] = Field(None,description="The optional string content for the step")
+  tool: Optional[str] = Field(None, description="The ID of the tool to call.")
+  input: Optional[str] = Field(None, description="The input parameter of the tool to call.")
+
+
 
 
 
@@ -134,30 +145,31 @@ def main_agent():
   }
 
   while True:
-    response = client.chat.completions.create(
+    response = client.chat.completions.parse(
       model=GEMINI_MODEL,
-      response_format={"type":"json_object"},
+      response_format=OutputFormat,
       messages=message_history
     )
 
     raw_response = response.choices[0].message.content
     message_history.append({"role":"assistant","content":raw_response})
-    parsed_result = json.loads(raw_response)
-    if parsed_result.get("step") == "START":
-      print("Starting....",parsed_result.get("content"))
+    parsed_result = response.choices[0].message.parsed
+    
+    if parsed_result.step == "START":
+      print("Starting....",parsed_result.content)
       continue 
     
-    if parsed_result.get("step") == "PLAN":
-      print("Thinking...\n",parsed_result.get("content"))
+    if parsed_result.step == "PLAN":
+      print("Thinking...\n",parsed_result.content)
       continue 
     
-    if parsed_result.get("step") == "OUTPUT":
-      print("Ouput:\n",parsed_result.get("content"))
+    if parsed_result.step == "OUTPUT":
+      print("Ouput:\n",parsed_result.content)
       break 
     
-    if parsed_result.get("step") == "TOOL":
-      tool = parsed_result.get("tool")
-      tool_input = parsed_result.get("input")
+    if parsed_result.step == "TOOL":
+      tool = parsed_result.tool
+      tool_input = parsed_result.input
       print(f"Tool: {tool} with input: {tool_input}")
       tool_response = available_tools[tool](tool_input)
       message_history.append({"role":"developer","content":json.dumps(
